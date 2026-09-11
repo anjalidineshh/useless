@@ -12,7 +12,7 @@ export default function FinalScreen({ onRestart }: Props) {
 
   useEffect(() => {
     setElapsed(getTimeElapsed());
-  }, [getTimeElapsed]);
+  }, []);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
