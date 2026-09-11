@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { AudioEngine } from '../engine/AudioEngine';
 
 export interface Achievement {
   id: string;
@@ -7,175 +8,134 @@ export interface Achievement {
   description: string;
   emoji: string;
   unlocked: boolean;
-  unlockedAt?: number;
 }
 
-export interface GameState {
-  // Progress
+const INITIAL_ACHIEVEMENTS: Achievement[] = [
+  { id: 'first_brush', title: 'Brush Enthusiast', description: 'Virtually polished every dental zone.', emoji: '🦷', unlocked: false },
+  { id: 'first_blood', title: 'First Blood', description: 'Slapped your first virtual mosquito.', emoji: '🩸', unlocked: false },
+  { id: 'mosquito_10', title: 'Mosquito Hunter', description: 'Defeated 10 mosquitoes with raw speed.', emoji: '🎯', unlocked: false },
+  { id: 'mosquito_25', title: 'Absolute Menace', description: 'Defeated 25 mosquitoes.', emoji: '💀', unlocked: false },
+  { id: 'mosquito_50', title: 'Sleep Destroyer', description: 'Defeated 50 mosquitoes.', emoji: '😤', unlocked: false },
+  { id: 'shower_enlightenment', title: 'Shower Enlightenment', description: 'Found the 38.5°C golden temperature.', emoji: '🌡️', unlocked: false },
+  { id: 'tea_3', title: 'Chai Master', description: 'Brewed delicious digital masala chai.', emoji: '☕', unlocked: false },
+  { id: 'dish_sparkle', title: 'Plate Polisher', description: 'Scrubbed greasy plates to perfection.', emoji: '🍽️', unlocked: false },
+  { id: 'bed_destroyer', title: 'Chaos Agent', description: 'Made a perfect bed and instantly destroyed it.', emoji: '🛏️', unlocked: false },
+  { id: 'all_done', title: 'Peak Uselessness', description: 'Completed all 12 pointless activities.', emoji: '🏆', unlocked: false },
+];
+
+interface GameState {
   completedActivities: string[];
   activityStats: Record<string, number>;
   timeStarted: number | null;
-  currentRoom: string;
-  
-  // Settings
-  soundEnabled: boolean;
-  reduceMotion: boolean;
-  
-  // Achievements
   achievements: Achievement[];
-  
-  // UI
-  showAchievements: boolean;
   newAchievement: Achievement | null;
+  soundEnabled: boolean;
 
-  // Actions
   completeActivity: (id: string) => void;
   incrementStat: (key: string, amount?: number) => void;
-  setCurrentRoom: (room: string) => void;
-  toggleSound: () => void;
-  toggleReduceMotion: () => void;
-  setShowAchievements: (show: boolean) => void;
+  unlockAchievement: (id: string) => void;
   clearNewAchievement: () => void;
-  resetGame: () => void;
   startTimer: () => void;
-  getTimeElapsed: () => number;
+  resetGame: () => void;
+  toggleSound: () => void;
   getUselessnessPercent: () => number;
+  getTimeElapsed: () => number;
 }
-
-const TOTAL_ACTIVITIES = 12;
-
-const DEFAULT_ACHIEVEMENTS: Achievement[] = [
-  { id: 'first_bath', title: 'Bath Enthusiast', description: 'Completed your first virtual bath.', emoji: '🛁', unlocked: false },
-  { id: 'dish_washer', title: 'Professional Dish Washer', description: 'Washed 25 virtual dishes.', emoji: '🍽️', unlocked: false },
-  { id: 'time_10', title: 'Why Are You Doing This?', description: 'Spent 10 minutes inside the website.', emoji: '🤔', unlocked: false },
-  { id: 'all_complete', title: 'Peak Uselessness', description: 'Completed all 12 activities.', emoji: '🏆', unlocked: false },
-  { id: 'time_30', title: 'Touch Grass', description: 'Unlocked after spending 30 minutes here.', emoji: '🌿', unlocked: false },
-  { id: 'first_blood', title: 'First Blood', description: 'Slapped your first mosquito.', emoji: '🦟', unlocked: false },
-  { id: 'mosquito_hunter', title: 'Mosquito Hunter', description: 'Defeated 10 mosquitoes.', emoji: '🎯', unlocked: false },
-  { id: 'absolute_menace', title: 'Absolute Menace', description: 'Defeated 25 mosquitoes.', emoji: '💀', unlocked: false },
-  { id: 'sleep_destroyer', title: 'Sleep Destroyer', description: 'Defeated 50 mosquitoes.', emoji: '😤', unlocked: false },
-  { id: 'tea_master', title: 'Chai Master', description: 'Made 3 cups of virtual tea.', emoji: '☕', unlocked: false },
-  { id: 'clean_freak', title: 'Clean Freak', description: 'Completed room cleaning.', emoji: '🧹', unlocked: false },
-  { id: 'laundry_pro', title: 'Laundry Legend', description: 'Folded all virtual clothes.', emoji: '👕', unlocked: false },
-  { id: 'temperature_seeker', title: 'Temperature Seeker', description: 'Found the perfect shower temperature.', emoji: '🚿', unlocked: false },
-];
 
 export const useGameStore = create<GameState>()(
   persist(
     (set, get) => ({
       completedActivities: [],
-      activityStats: {},
+      activityStats: {
+        teeth: 0,
+        baths: 0,
+        dishes: 0,
+        clothes: 0,
+        mosquitoes: 0,
+        tea: 0,
+        roomsCleaned: 0,
+        bedsMade: 0,
+      },
       timeStarted: null,
-      currentRoom: 'living',
-      soundEnabled: true,
-      reduceMotion: false,
-      achievements: DEFAULT_ACHIEVEMENTS,
-      showAchievements: false,
+      achievements: INITIAL_ACHIEVEMENTS,
       newAchievement: null,
+      soundEnabled: true,
 
-      completeActivity: (id: string) => {
-        const state = get();
-        if (state.completedActivities.includes(id)) return;
-        
-        const newCompleted = [...state.completedActivities, id];
-        
-        // Check achievements
-        const toUnlock: string[] = [];
-        if (id === 'bath') toUnlock.push('first_bath');
-        if (id === 'room_cleaning') toUnlock.push('clean_freak');
-        if (id === 'laundry_folding') toUnlock.push('laundry_pro');
-        if (id === 'shower_temperature') toUnlock.push('temperature_seeker');
-        if (newCompleted.length === TOTAL_ACTIVITIES) toUnlock.push('all_complete');
-
-        let updatedAchievements = state.achievements;
-        let latestUnlocked: Achievement | null = null;
-        
-        toUnlock.forEach(achId => {
-          updatedAchievements = updatedAchievements.map(a => {
-            if (a.id === achId && !a.unlocked) {
-              latestUnlocked = { ...a, unlocked: true, unlockedAt: Date.now() };
-              return latestUnlocked;
-            }
-            return a;
-          });
-        });
-
-        set({
-          completedActivities: newCompleted,
-          achievements: updatedAchievements,
-          newAchievement: latestUnlocked,
-        });
-      },
-
-      incrementStat: (key: string, amount = 1) => {
-        const state = get();
-        const current = state.activityStats[key] || 0;
-        const newVal = current + amount;
-        const newStats = { ...state.activityStats, [key]: newVal };
-        
-        // Check stat-based achievements
-        const toUnlock: string[] = [];
-        if (key === 'mosquitoes' && current === 0 && newVal >= 1) toUnlock.push('first_blood');
-        if (key === 'mosquitoes' && current < 10 && newVal >= 10) toUnlock.push('mosquito_hunter');
-        if (key === 'mosquitoes' && current < 25 && newVal >= 25) toUnlock.push('absolute_menace');
-        if (key === 'mosquitoes' && current < 50 && newVal >= 50) toUnlock.push('sleep_destroyer');
-        if (key === 'tea' && current < 3 && newVal >= 3) toUnlock.push('tea_master');
-        if (key === 'dishes' && current < 25 && newVal >= 25) toUnlock.push('dish_washer');
-
-        let updatedAchievements = get().achievements;
-        let latestUnlocked: Achievement | null = null;
-        
-        toUnlock.forEach(achId => {
-          updatedAchievements = updatedAchievements.map(a => {
-            if (a.id === achId && !a.unlocked) {
-              latestUnlocked = { ...a, unlocked: true, unlockedAt: Date.now() };
-              return latestUnlocked;
-            }
-            return a;
-          });
-        });
-
-        set({ activityStats: newStats, achievements: updatedAchievements, newAchievement: latestUnlocked });
-      },
-
-      setCurrentRoom: (room: string) => set({ currentRoom: room }),
-      toggleSound: () => set(s => ({ soundEnabled: !s.soundEnabled })),
-      toggleReduceMotion: () => set(s => ({ reduceMotion: !s.reduceMotion })),
-      setShowAchievements: (show: boolean) => set({ showAchievements: show }),
-      clearNewAchievement: () => set({ newAchievement: null }),
-      startTimer: () => {
-        if (!get().timeStarted) set({ timeStarted: Date.now() });
-      },
-      
-      getTimeElapsed: () => {
-        const { timeStarted } = get();
-        if (!timeStarted) return 0;
-        return Math.floor((Date.now() - timeStarted) / 1000);
-      },
-      
-      getUselessnessPercent: () => {
+      completeActivity: (id) => {
         const { completedActivities } = get();
-        return Math.round((completedActivities.length / TOTAL_ACTIVITIES) * 100);
+        if (completedActivities.includes(id)) return;
+        const newList = [...completedActivities, id];
+        set({ completedActivities: newList });
+
+        AudioEngine.playAchievement();
+
+        if (id === 'brushing') get().unlockAchievement('first_brush');
+        if (id === 'dishes') get().unlockAchievement('dish_sparkle');
+        if (newList.length === 12) get().unlockAchievement('all_done');
       },
 
+      incrementStat: (key, amount = 1) => {
+        const current = get().activityStats[key] ?? 0;
+        const newVal = current + amount;
+        set({ activityStats: { ...get().activityStats, [key]: newVal } });
+
+        if (key === 'mosquitoes') {
+          if (current === 0 && newVal >= 1) get().unlockAchievement('first_blood');
+          if (current < 10 && newVal >= 10) get().unlockAchievement('mosquito_10');
+          if (current < 25 && newVal >= 25) get().unlockAchievement('mosquito_25');
+          if (current < 50 && newVal >= 50) get().unlockAchievement('mosquito_50');
+        }
+        if (key === 'tea' && newVal >= 1) get().unlockAchievement('tea_3');
+      },
+
+      unlockAchievement: (id) => {
+        const ach = get().achievements.find(a => a.id === id && !a.unlocked);
+        if (!ach) return;
+        const updated = { ...ach, unlocked: true };
+        set({
+          achievements: get().achievements.map(a => a.id === id ? updated : a),
+          newAchievement: updated,
+        });
+        AudioEngine.playAchievement();
+      },
+
+      clearNewAchievement: () => set({ newAchievement: null }),
+      startTimer: () => { if (!get().timeStarted) set({ timeStarted: Date.now() }); },
+      toggleSound: () => {
+        const next = !get().soundEnabled;
+        AudioEngine.setEnabled(next);
+        set({ soundEnabled: next });
+      },
       resetGame: () => set({
         completedActivities: [],
-        activityStats: {},
+        activityStats: {
+          teeth: 0,
+          baths: 0,
+          dishes: 0,
+          clothes: 0,
+          mosquitoes: 0,
+          tea: 0,
+          roomsCleaned: 0,
+          bedsMade: 0,
+        },
         timeStarted: Date.now(),
-        currentRoom: 'living',
-        achievements: DEFAULT_ACHIEVEMENTS,
+        achievements: INITIAL_ACHIEVEMENTS,
         newAchievement: null,
       }),
+      getUselessnessPercent: () => Math.round((get().completedActivities.length / 12) * 100),
+      getTimeElapsed: () => {
+        const { timeStarted } = get();
+        return timeStarted ? Math.floor((Date.now() - timeStarted) / 1000) : 0;
+      },
     }),
     {
-      name: 'useless-day-storage',
-      partialize: (state) => ({
-        completedActivities: state.completedActivities,
-        activityStats: state.activityStats,
-        timeStarted: state.timeStarted,
-        achievements: state.achievements,
-        soundEnabled: state.soundEnabled,
-        reduceMotion: state.reduceMotion,
+      name: 'useless-day-v3',
+      partialize: (s) => ({
+        completedActivities: s.completedActivities,
+        activityStats: s.activityStats,
+        timeStarted: s.timeStarted,
+        achievements: s.achievements,
+        soundEnabled: s.soundEnabled,
       }),
     }
   )

@@ -1,16 +1,18 @@
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import { useEffect, useState } from 'react';
 
-export default function FinalScreen() {
-  const navigate = useNavigate();
+interface Props {
+  onRestart?: () => void;
+}
+
+export default function FinalScreen({ onRestart }: Props) {
   const { activityStats, getTimeElapsed, resetGame } = useGameStore();
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     setElapsed(getTimeElapsed());
-  }, []);
+  }, [getTimeElapsed]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -19,26 +21,28 @@ export default function FinalScreen() {
   };
 
   const stats = [
-    { label: 'Baths taken', value: 1, emoji: '🛁' },
-    { label: 'Dishes cleaned', value: (activityStats['dishes'] || 0) + 6, emoji: '🍽️' },
-    { label: 'Tea cups prepared', value: activityStats['tea'] || 1, emoji: '☕' },
-    { label: 'Mosquitoes destroyed', value: activityStats['mosquitoes'] || 0, emoji: '🦟' },
-    { label: 'Clothes washed', value: (activityStats['clothes'] || 0) + 7, emoji: '👕' },
-    { label: 'Time wasted', value: formatTime(elapsed), emoji: '⏱️' },
+    { label: 'Virtual baths', value: Math.max(1, activityStats['baths'] || 0), emoji: '🛁' },
+    { label: 'Virtual teeth brushed', value: Math.max(1, activityStats['teeth'] || 0), emoji: '🦷' },
+    { label: 'Virtual dishes washed', value: Math.max(5, activityStats['dishes'] || 0), emoji: '🍽️' },
+    { label: 'Virtual clothes washed', value: Math.max(3, activityStats['clothes'] || 0), emoji: '👕' },
+    { label: 'Mosquitoes killed', value: Math.max(5, activityStats['mosquitoes'] || 0), emoji: '🦟' },
+    { label: 'Tea made', value: Math.max(1, activityStats['tea'] || 0), emoji: '☕' },
   ];
 
   const handleReset = () => {
     resetGame();
-    navigate('/');
+    if (onRestart) {
+      onRestart();
+    }
   };
 
   const handleShare = () => {
-    const text = `I just completed "The Most Useless Day" — 12 completely pointless digital activities. ${formatTime(elapsed)} of my life, gone. 100% USELESS. 🏆`;
+    const text = `I spent ${formatTime(elapsed)} playing "USELESS REALITY" and achieved 0% real-world productivity. 100% USELESS AR! 🏆`;
     if (navigator.share) {
-      navigator.share({ title: 'The Most Useless Day', text });
+      navigator.share({ title: 'USELESS REALITY', text });
     } else {
       navigator.clipboard.writeText(text);
-      alert('Copied to clipboard! Share your uselessness.');
+      alert('Copied to clipboard! Share your absolute uselessness.');
     }
   };
 
@@ -46,28 +50,28 @@ export default function FinalScreen() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-12"
-      style={{ background: 'radial-gradient(ellipse at center, #2a1e14 0%, #1a1410 100%)' }}
+      className="min-h-screen flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden"
+      style={{ background: 'radial-gradient(ellipse at center, #241810 0%, #0d0a08 100%)' }}
     >
-      {/* Confetti particles */}
+      {/* Floating Confetti Particles */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 30 }).map((_, i) => (
+        {Array.from({ length: 36 }).map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-2 h-2 rounded-full"
+            className="absolute w-2.5 h-2.5 rounded-full"
             style={{
-              background: ['#e8a855', '#7ec87e', '#e87070', '#70a8e8', '#e870e8'][i % 5],
+              background: ['#e8a855', '#7ec87e', '#e87070', '#70a8e8', '#facc15', '#c084fc'][i % 6],
               left: `${Math.random() * 100}%`,
-              top: '-10px',
+              top: '-15px',
             }}
             animate={{
               y: ['0vh', '110vh'],
-              x: [0, (Math.random() - 0.5) * 200],
+              x: [0, (Math.random() - 0.5) * 220],
               rotate: [0, 720],
-              opacity: [1, 0.6, 0],
+              opacity: [1, 0.7, 0],
             }}
             transition={{
-              duration: 2 + Math.random() * 3,
+              duration: 2.5 + Math.random() * 3,
               delay: Math.random() * 2,
               repeat: Infinity,
               ease: 'easeIn',
@@ -77,95 +81,100 @@ export default function FinalScreen() {
       </div>
 
       <div className="relative z-10 max-w-2xl w-full text-center">
-        {/* Trophy */}
+        {/* Giant Trophy */}
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: 'spring', damping: 10, stiffness: 100, delay: 0.2 }}
-          className="text-8xl mb-6"
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', damping: 12, stiffness: 120, delay: 0.15 }}
+          className="text-7xl md:text-8xl mb-4"
         >
           🏆
         </motion.div>
 
-        {/* Main heading */}
+        {/* Master Heading */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.35 }}
         >
-          <h1 className="font-display text-6xl md:text-8xl font-black text-white mb-2">
-            YOU DID IT.
+          <p className="text-amber-300 font-mono tracking-widest text-xs uppercase mb-2">
+            100% USELESSNESS ACHIEVED
+          </p>
+          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-black text-white mb-3 tracking-tight">
+            YOU HAVE MASTERED <br />
+            <span style={{ color: '#e8a855' }}>ABSOLUTE USELESSNESS.</span>
           </h1>
-          <p className="text-white/50 text-lg mb-8">
-            You completed 12 completely unnecessary digital activities.
+          <p className="text-white/50 text-sm md:text-base max-w-lg mx-auto mb-8">
+            You physically moved your body in front of an advanced computer vision model to accomplish precisely nothing.
           </p>
         </motion.div>
 
-        {/* Stats grid */}
+        {/* Stats Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="glass-card p-6 mb-6 grid grid-cols-2 md:grid-cols-3 gap-4"
+          transition={{ delay: 0.55 }}
+          className="glass-card p-6 mb-6 grid grid-cols-2 sm:grid-cols-3 gap-4"
         >
           {stats.map((stat, i) => (
             <motion.div
-              key={i}
+              key={stat.label}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 1 + i * 0.1 }}
-              className="text-center"
+              transition={{ delay: 0.7 + i * 0.08 }}
+              className="text-center p-2 rounded-xl bg-black/20"
             >
-              <div className="text-3xl mb-1">{stat.emoji}</div>
-              <div className="text-white font-bold text-lg">{stat.value}</div>
-              <div className="text-white/40 text-xs">{stat.label}</div>
+              <div className="text-2xl mb-1">{stat.emoji}</div>
+              <div className="text-white font-mono font-bold text-xl">{stat.value}</div>
+              <div className="text-white/40 text-xs mt-0.5">{stat.label}</div>
             </motion.div>
           ))}
         </motion.div>
 
-        {/* Final score */}
+        {/* Final Productivity Metric */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 1.5, type: 'spring' }}
-          className="mb-8 p-6"
+          transition={{ delay: 1.1, type: 'spring' }}
+          className="mb-8 p-6 rounded-3xl"
           style={{
-            background: 'linear-gradient(135deg, rgba(232,168,85,0.2) 0%, rgba(232,168,85,0.05) 100%)',
-            border: '1px solid rgba(232,168,85,0.4)',
-            borderRadius: '20px',
+            background: 'linear-gradient(135deg, rgba(232,168,85,0.18) 0%, rgba(20,15,10,0.85) 100%)',
+            border: '1px solid rgba(232,168,85,0.35)',
+            boxShadow: '0 8px 32px rgba(232,168,85,0.1)',
           }}
         >
-          <p className="text-white/50 text-sm tracking-widest uppercase mb-2">YOUR FINAL SCORE</p>
-          <p className="font-display text-5xl font-black text-amber-warm">100% USELESS</p>
-          <p className="text-white/40 text-sm mt-4 italic leading-relaxed">
-            "Humanity has advanced technologically.<br />
-            You used that technology to digitally wash a plate."
+          <p className="text-white/50 text-xs tracking-widest uppercase mb-1">
+            Real-world productivity achieved:
+          </p>
+          <p className="font-mono text-5xl font-black text-amber-400">0%</p>
+          <p className="text-white/45 text-xs mt-3 italic">
+            “Do absolutely normal things. But in augmented reality.”
           </p>
         </motion.div>
 
-        {/* Buttons */}
+        {/* Action Buttons */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 2 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center"
+          transition={{ delay: 1.3 }}
+          className="flex flex-col sm:flex-row gap-3.5 justify-center"
         >
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}
             onClick={handleReset}
-            className="btn-primary"
+            className="btn-primary font-bold px-8 py-3.5"
             style={{ background: '#e8a855', color: '#1a1410' }}
           >
-            START AGAIN
+            🔄 WASTE ANOTHER DAY
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
             onClick={handleShare}
-            className="btn-secondary"
+            className="btn-secondary px-6 py-3.5 text-white/80 hover:text-white"
           >
-            SHARE MY USELESSNESS 📢
+            📢 SHARE MY USELESSNESS
           </motion.button>
         </motion.div>
       </div>

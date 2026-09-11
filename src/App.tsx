@@ -1,41 +1,79 @@
-import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
-import LandingPage from './pages/LandingPage';
-import ApartmentPage from './pages/ApartmentPage';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { useState } from 'react';
+import StartScreen from './pages/StartScreen';
+import MainLayout from './pages/MainLayout';
 import FinalScreen from './pages/FinalScreen';
-import AchievementsPanel from './components/AchievementsPanel';
-import RandomEvents from './components/RandomEvents';
 import AchievementToast from './components/AchievementToast';
+import { useHandTracking } from './hooks/useHandTracking';
 import { useGameStore } from './store/gameStore';
 import './index.css';
 
-function RootLayout() {
-  const { showAchievements, setShowAchievements } = useGameStore();
+function AppRoot() {
+  const { videoRef, state: tracking, startCamera, stopCamera, startDemo } = useHandTracking();
+  const { completedActivities, startTimer } = useGameStore();
+  const [started, setStarted] = useState(false);
+
+  const handleStartCamera = async () => {
+    startTimer();
+    setStarted(true);
+    await startCamera();
+  };
+
+  const handleStartDemo = () => {
+    startTimer();
+    setStarted(true);
+    startDemo();
+  };
+
+  const handleStop = () => {
+    stopCamera();
+    setStarted(false);
+  };
+
   return (
-    <div className="relative min-h-screen" style={{ background: '#1a1410' }}>
-      <Outlet />
-      <AnimatePresence>
-        {showAchievements && (
-          <AchievementsPanel onClose={() => setShowAchievements(false)} />
-        )}
-      </AnimatePresence>
+    <div className="relative w-screen h-screen overflow-hidden bg-[#070504]">
+      {/* Persistent Full-Screen Mirrored Live Camera Stream */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className={started && tracking.mode === 'live' ? 'fixed inset-0 w-full h-full object-cover -scale-x-100 z-0 pointer-events-none' : 'hidden'}
+      />
+
+      {completedActivities.length === 12 && started ? (
+        <FinalScreen onRestart={handleStop} />
+      ) : !started ? (
+        <StartScreen
+          onStartCamera={handleStartCamera}
+          onStartDemo={handleStartDemo}
+          mode={tracking.mode}
+          errorMessage={tracking.errorMessage}
+        />
+      ) : (
+        <MainLayout
+          tracking={tracking}
+          onStopCamera={handleStop}
+          onStartDemo={handleStartDemo}
+          videoRef={videoRef}
+        />
+      )}
+    </div>
+  );
+}
+
+function RootLayout() {
+  return (
+    <div className="relative min-h-screen" style={{ background: '#0a0806' }}>
+      <AppRoot />
       <AchievementToast />
-      <RandomEvents />
     </div>
   );
 }
 
 const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <RootLayout />,
-    children: [
-      { index: true, element: <LandingPage /> },
-      { path: 'apartment', element: <ApartmentPage /> },
-      { path: 'done', element: <FinalScreen /> },
-      { path: '*', element: <Navigate to="/" replace /> },
-    ],
-  },
+  { path: '/', element: <RootLayout /> },
+  { path: '*', element: <Navigate to="/" replace /> },
 ], { basename: '/useless' });
 
 export default function App() {
